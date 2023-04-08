@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Sheets API Quickstart</title>
+    <meta charset="utf-8" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/party-js@latest/bundle/party.min.js"></script>
+</head>
+  <style>
+    .fadeIn { animation: fadeIn 3s; }
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+  </style>
+  <body style="background-color: #0d6efd";>
+    <div class="container text-center mt-5 mb-5">
+      <div class="row">
+        <div class="col"></div>
+        <div class="col">
+          <div class="circle" style="
+          width: 200px;
+          height: 200px;
+          background-color: white;
+          text-align: center;
+          margin: auto;
+          background-image: url(&quot;https://muslimcenter.org/wp-content/uploads/2019/11/retina-logo.png&quot;);
+          background-size: 350px;
+          background-repeat: no-repeat;
+          border-radius: 100%;
+          background-position: 50% 35%;
+          /* padding-top: 10px; */
+      "></div>          </div>
+        <div class="col"></div>
+
+      </div>
+      <div class="row">
+        <div class="col">
+          <h4 style="color: white; font-size: 50px"><span style="font-size: 72px" id="raised"></span> of $250,0000</h4>
+          <div class="progress" role="progressbar" aria-label="Basic example" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="
+          height: 50px;
+          border-radius: 100px;
+          border: 5px solid #e9ecef;
+      ">
+            <div class="progress-bar progress-bar-striped progress-bar-animated bg-warning" id="donation_progress" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+      </div>
+    <div class="container text-center">
+      <div class="row">
+        <div class="col"></div>
+        <div class="col" id="individual_donations"></div>
+        <div class="col"></div>
+      </div>
+    </div>
+
+    <div class="row">
+    <!--Add buttons to initiate auth sequence and sign out-->
+    <button class="btn btn-primary" id="authorize_button" onclick="handleAuthClick()">Authorize</button>
+    <button class="btn btn-primary" id="signout_button" onclick="handleSignoutClick()">Sign Out</button>
+    <button class="btn btn-primary" id="fetch_data" onclick="getDonations()">Fetch Data</button>
+    </div>
+
+
+    <pre id="content" style="white-space: pre-wrap;"></pre>
+
+    <script type="text/javascript">
+
+      /* exported gapiLoaded */
+      /* exported gisLoaded */
+      /* exported handleAuthClick */
+      /* exported handleSignoutClick */
+
+      // TODO(developer): Set to client ID and API key from the Developer Console
+      const CLIENT_ID = '{{YOUR_CLIENT_ID}}';
+      const API_KEY = '{{YOUR_API_KEY}}';
+      const SPREADSHEET_ID = '{{YOUR_SPREADSHEET_ID}}'
+
+      // Discovery doc URL for APIs used by the quickstart
+      const DISCOVERY_DOC = 'https://sheets.googleapis.com/$discovery/rest?version=v4';
+
+      // Authorization scopes required by the API; multiple scopes can be
+      // included, separated by spaces.
+      const SCOPES = 'https://www.googleapis.com/auth/spreadsheets.readonly';
+
+      let tokenClient;
+      let gapiInited = false;
+      let gisInited = false;
+
+      document.getElementById('authorize_button').style.visibility = 'hidden';
+      document.getElementById('signout_button').style.visibility = 'hidden';
+
+      /**
+       * Callback after api.js is loaded.
+       */
+      function gapiLoaded() {
+        gapi.load('client', initializeGapiClient);
+      }
+
+      /**
+       * Callback after the API client is loaded. Loads the
+       * discovery doc to initialize the API.
+       */
+      async function initializeGapiClient() {
+        await gapi.client.init({
+          apiKey: API_KEY,
+          discoveryDocs: [DISCOVERY_DOC],
+        });
+        gapiInited = true;
+        maybeEnableButtons();
+      }
+
+      /**
+       * Callback after Google Identity Services are loaded.
+       */
+      function gisLoaded() {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: SCOPES,
+          callback: '', // defined later
+        });
+        gisInited = true;
+        maybeEnableButtons();
+      }
+
+      /**
+       * Enables user interaction after all libraries are loaded.
+       */
+      function maybeEnableButtons() {
+        if (gapiInited && gisInited) {
+          document.getElementById('authorize_button').style.visibility = 'visible';
+        }
+      }
+
+      /**
+       *  Sign in the user upon button click.
+       */
+      function handleAuthClick() {
+        tokenClient.callback = async (resp) => {
+          if (resp.error !== undefined) {
+            throw (resp);
+          }
+          document.getElementById('signout_button').style.visibility = 'visible';
+          document.getElementById('authorize_button').innerText = 'Refresh';
+          await getDonations();
+          setInterval(function(){
+    refresh()
+}, 15000)
+        };
+
+        if (gapi.client.getToken() === null) {
+          // Prompt the user to select a Google Account and ask for consent to share their data
+          // when establishing a new session.
+          tokenClient.requestAccessToken({prompt: 'consent'});
+        } else {
+          // Skip display of account chooser and consent dialog for an existing session.
+          tokenClient.requestAccessToken({prompt: ''});
+        }
+      }
+
+      /**
+       *  Sign out the user upon button click.
+       */
+      function handleSignoutClick() {
+        const token = gapi.client.getToken();
+        if (token !== null) {
+          google.accounts.oauth2.revoke(token.access_token);
+          gapi.client.setToken('');
+          document.getElementById('content').innerText = '';
+          document.getElementById('authorize_button').innerText = 'Authorize';
+          document.getElementById('signout_button').style.visibility = 'hidden';
+        }
+      }
+
+      /**
+       * 
+       * 
+      */
+
+      async function getDonations() {
+        let response;
+        try {
+          response = await gapi.client.sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: 'Sheet1!A1:B3',
+          });
+        }
+        catch (err) {
+          document.getElementById('content').innerText = err.message;
+          return;
+        }
+        const range = response.result;
+        if (!range || !range.values || range.values.length == 0) {
+          document.getElementById('content').innerText = 'No values found.';
+          return;
+        }
+        console.log(range)
+        values = {}
+        const output = range.values.forEach(row => {
+          values[row[0]] = row[1]
+        });
+
+        document.getElementById('content').innerText = JSON.stringify(values);
+        document.getElementById("donation_progress").style.width = values["Percentage"];
+        document.getElementById("raised").innerText = values["Raised"];
+        await getDonationsIndividual() 
+
+      }
+
+      offset = 0;
+      async function getDonationsIndividual() {
+        let response;
+        try {
+          response = await gapi.client.sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `Sheet1!A${6+offset}:B100`,
+          });
+        }
+        catch (err) {
+          document.getElementById('content').innerText = err.message;
+          return;
+        }
+        const range = response.result;
+        if (!range || !range.values || range.values.length == 0) {
+          document.getElementById('content').innerText = 'No values found.';
+          return;
+        }
+        console.log(range)
+        values = []
+        delay = 1;
+        const output = range.values.forEach(row => {
+          offset += 1
+
+          if (row[0] === undefined || row[1] === undefined) {
+            return
+          }
+
+          card = `<div class="card mb-3 fadeIn" id="donationCard" style="
+                  background-color: #0a3370;
+                  border-radius: 50px;
+                  color: white;
+              ">
+            <div class="card-body">
+              <h5 class="card-title" style="
+    font-size: 35px">${row[1]}</h5>
+              <p class="card-text">${row[0]}</p>
+            </div>
+          </div>`
+
+          elements = document.getElementsByClassName("fadeIn")
+          Array.from(elements).forEach(element => {
+            element.classList.remove("fadeIn")
+          })
+
+          document.getElementById('individual_donations').innerHTML  = card += document.getElementById('individual_donations').innerHTML;
+          party.confetti(document.getElementById("donationCard"))
+
+        });
+
+
+      }
+
+      /**
+       * Print the names and majors of students in a sample spreadsheet:
+       * https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
+       */
+      async function listMajors() {
+        let response;
+        try {
+          // Fetch first 10 files
+          response = await gapi.client.sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: 'Class Data!A2:E',
+          });
+        } catch (err) {
+          document.getElementById('content').innerText = err.message;
+          return;
+        }
+        const range = response.result;
+        if (!range || !range.values || range.values.length == 0) {
+          document.getElementById('content').innerText = 'No values found.';
+          return;
+        }
+        // Flatten to string to display
+        const output = range.values.reduce(
+            (str, row) => `${str}${row[0]}, ${row[4]}\n`,
+            'Name, Major:\n');
+        document.getElementById('content').innerText = output;
+      }
+
+      function refresh(){
+    console.log('refresh Called')
+    getDonations();
+}
+
+    </script>
+    
+    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+  </body>
+</html>
