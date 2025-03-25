@@ -63,6 +63,9 @@
     <button class="btn btn-primary" id="authorize_button" onclick="handleAuthClick()">Authorize</button>
     <button class="btn btn-primary" id="signout_button" onclick="handleSignoutClick()">Sign Out</button>
     <button class="btn btn-primary" id="fetch_data" onclick="getDonations()">Fetch Data</button>
+    <input type="text" id="clientId" name="clientId">
+    <input type="text" id="API" name="api_key">
+    <button class="btn btn-primary" id="load_secrets" onclick="loadSecrets()">Load Secrets</button>
     </div>
 
 
@@ -70,16 +73,18 @@
 
     <script type="text/javascript">
 
-console.log(process.env);
-
+    function loadSecrets() {
+      gapiLoaded()
+      gisLoaded()
+    }
       /* exported gapiLoaded */
       /* exported gisLoaded */
       /* exported handleAuthClick */
       /* exported handleSignoutClick */
 
       // TODO(developer): Set to client ID and API key from the Developer Console
-      const CLIENT_ID = process.env.CLIENT_ID;
-      const API_KEY = process.env.API_KEY;
+      // const CLIENT_ID = document.getElementById('clientId').value;
+      // const API_KEY = document.getElementById('API').value;
       const SPREADSHEET_ID = '13wNI5F8heM1d6pN_VJagGEo_54_-NewnIVvkkkyyWew'
 
       // Discovery doc URL for APIs used by the quickstart
@@ -93,8 +98,8 @@ console.log(process.env);
       let gapiInited = false;
       let gisInited = false;
 
-      document.getElementById('authorize_button').style.visibility = 'hidden';
-      document.getElementById('signout_button').style.visibility = 'hidden';
+      // document.getElementById('authorize_button').style.visibility;
+      // document.getElementById('signout_button').style.visibility;
 
       /**
        * Callback after api.js is loaded.
@@ -109,7 +114,7 @@ console.log(process.env);
        */
       async function initializeGapiClient() {
         await gapi.client.init({
-          apiKey: API_KEY,
+          apiKey: document.getElementById('API').value,
           discoveryDocs: [DISCOVERY_DOC],
         });
         gapiInited = true;
@@ -121,7 +126,7 @@ console.log(process.env);
        */
       function gisLoaded() {
         tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: CLIENT_ID,
+          client_id: document.getElementById('clientId').value,
           scope: SCOPES,
           callback: '', // defined later
         });
